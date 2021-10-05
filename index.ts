@@ -29,6 +29,7 @@
 // Guaranteed constraints: 0 ≤ html.length ≤ 6 · 104.
 
 // [output] string: The given HTML converted into the Luna format.
+
 type TagNames = "div" | "/div" | "p" | "/p" | "b" | "/b" | "img /";
 
 class TagNode {
@@ -46,7 +47,7 @@ class TagNode {
 }
 
 class Converter {
-  head = [];
+  head: TagNode[] = [];
 
   hash = {
     "<div>": "DIV([",
@@ -62,8 +63,8 @@ class Converter {
   };
 
   parse(html: string) {
-    const Q = [];
-    const closingTagQ = [];
+    const parentStack: TagNode[] = [];
+    const closingTagStack = [];
 
     while (html) {
       const [tag, newHtml] = this.getNextTag(html);
@@ -71,31 +72,86 @@ class Converter {
 
       const node = this.createNode(tag);
 
-      if (node.name === closingTagQ[0]) {
-        this.head.push(Q.shift());
-        closingTagQ.shift();
+      // If the node is the closing tag at the front of stack
+      if (node.name === closingTagStack[0]) {
+        if (parentStack.length >= 2) {
+          parentStack[1].addChild(parentStack[0]);
+        } else {
+          this.head.push(parentStack[0]);
+        }
+        parentStack.shift();
+        closingTagStack.shift();
+
+        // Stop execution of current loop
         continue;
       } else if (this.closingTags[node.name]) {
-        closingTagQ.push(this.closingTags[node.name]);
+        // If node is an opening tag, add it to closing stack
+        closingTagStack.unshift(this.closingTags[node.name]);
       }
 
       if (node.children !== null) {
-        Q.push(node);
+        // Node is an opening tag
+        parentStack.unshift(node);
       } else {
-        Q[0].addChild(node);
+        // Node is img tag
+        parentStack[0].addChild(node);
       }
     }
+
+    return this.head;
   }
 
   stringify() {
     let res = "";
 
-    for (let tag of this.head) {
-      res += `<${tag.name}>`;
-      for (let child of tag.children) {
-        res += `<${child.name}>`;
-      }
-      res += `</${tag.name}>`;
+    const loopChildren = (node: TagNode) => {
+      let r = `<${node.name}>`;
+
+      node.children.forEach((child) => {
+        if (child.children) {
+          r += loopChildren(child);
+        } else {
+          r += `<${child.name}>`;
+        }
+      });
+
+      r += `</${node.name}>`;
+
+      return r;
+    };
+
+    for (let parent of this.head) {
+      res += loopChildren(parent);
+    }
+
+    console.log(res);
+  }
+
+  prettyPrint() {
+    let res = "";
+    let level = 0;
+
+    const loopChildren = (node: TagNode) => {
+      const gap = Array(level + 1).join("  ");
+
+      let r = gap + (level ? "└── " : "") + `${node.name}\n`;
+
+      node.children.forEach((child) => {
+        if (child.children) {
+          level++;
+          r += loopChildren(child);
+        } else {
+          // Image tag
+          r += gap + "  └── " + `${child.name.substring(0, 3)}\n`;
+        }
+      });
+
+      level = 0;
+      return r;
+    };
+
+    for (let parent of this.head) {
+      res += loopChildren(parent);
     }
 
     console.log(res);
@@ -110,13 +166,18 @@ class Converter {
 
   getNextTag(html: string) {
     const nextEndTag = html.indexOf(">");
-
     return [html.substring(0, nextEndTag + 1), html.substring(nextEndTag + 1)];
   }
 }
 
 const c = new Converter();
 
-c.parse("<div><img /><img /></div><div><p></p><img /></div>");
-console.log(c.head);
+const ast = c.parse(
+  "<div><img /><b><p><img /></p></b><img /></div><div><p><img /><b><img /></b></p><img /></div><p><div><b><img /></b><img /></div></p>"
+);
+
+console.table(ast);
+
 c.stringify();
+
+c.prettyPrint();
