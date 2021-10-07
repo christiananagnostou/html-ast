@@ -34,7 +34,7 @@ type TagNames = "div" | "/div" | "p" | "/p" | "b" | "/b" | "img /";
 
 class TagNode {
   name: string;
-  children: TagNode[];
+  children: TagNode[] | null;
 
   constructor(name: TagNames, children: TagNode[]) {
     this.name = name;
@@ -44,12 +44,16 @@ class TagNode {
   addChild(child: TagNode) {
     this.children = this.children ? [...this.children, child] : [child];
   }
+
+  forEachChild(callback: (child: TagNode) => void) {
+    this.children.forEach((child) => callback(child));
+  }
 }
 
 class Converter {
   head: TagNode[] = [];
 
-  hash = {
+  htmlLunaMap = {
     "<div>": "DIV([",
     "<p>": "P([",
     "<b>": "B([",
@@ -94,34 +98,62 @@ class Converter {
         parentStack.unshift(node);
       } else {
         // Node is img tag
-        parentStack[0].addChild(node);
+        if (parentStack[0]) {
+          parentStack[0].addChild(node);
+        } else {
+          this.head.push(node);
+        }
       }
     }
 
     return this.head;
   }
 
-  stringify() {
+  formatHTML(options: { compress: boolean } = { compress: false }) {
+    const { compress } = options;
     let res = "";
+    let level = 1;
+
+    const formatNode = (node: TagNode, level: number, opening: boolean) => {
+      let r = "";
+
+      if (!compress) r += Array(level).join("   ");
+      r += opening ? `<${node.name}>` : `</${node.name}>`;
+      if (!compress) r += "\n";
+
+      return r;
+    };
 
     const loopChildren = (node: TagNode) => {
-      let r = `<${node.name}>`;
+      let r = "";
 
-      node.children.forEach((child) => {
+      r += formatNode(node, level, true);
+
+      node.forEachChild((child) => {
         if (child.children) {
+          level++;
           r += loopChildren(child);
         } else {
-          r += `<${child.name}>`;
+          // Image tag
+          r += formatNode(child, level + 1, true);
         }
       });
 
-      r += `</${node.name}>`;
+      r += formatNode(node, level, false);
+
+      if (level > 1) level--;
 
       return r;
     };
 
     for (let parent of this.head) {
-      res += loopChildren(parent);
+      if (parent.children) {
+        res += loopChildren(parent);
+      } else {
+        res += formatNode(parent, level, true);
+      }
+
+      if (!compress) res += "\n";
     }
 
     console.log(res);
@@ -151,7 +183,11 @@ class Converter {
     };
 
     for (let parent of this.head) {
-      res += loopChildren(parent);
+      if (parent.children) {
+        res += loopChildren(parent);
+      } else {
+        res += `${parent.name.substring(0, 3)}\n`;
+      }
     }
 
     console.log(res);
@@ -173,11 +209,12 @@ class Converter {
 const c = new Converter();
 
 const ast = c.parse(
-  "<div><img /><b><p><img /></p></b><img /></div><div><p><img /><b><img /></b></p><img /></div><p><div><b><img /></b><img /></div></p>"
+  "<div><img /><b><p><img /><b><img /><img /><div><p><img /><p><img/></p></p></div></b></p></b><img /></div><div><p><img /><b><img /></b></p><img /></div><p><div><b><img /></b><img /></div></p><img /><p></p>"
 );
 
 console.table(ast);
 
-c.stringify();
+c.formatHTML({ compress: false });
+c.formatHTML({ compress: true });
 
 c.prettyPrint();
