@@ -61,8 +61,14 @@ class Converter {
   };
 
   closingTags = {
+    head: "/head",
+    body: "/body",
+    section: "/section",
+    article: "/article",
+    button: "/button",
     div: "/div",
     p: "/p",
+    span: "/span",
     b: "/b",
   };
 
@@ -152,21 +158,20 @@ class Converter {
       } else {
         res += formatNode(parent, level, true);
       }
-
-      if (!compress) res += "\n";
     }
 
+    res = res.replace(/\n+$/, "");
     console.log(res);
   }
 
   prettyPrint() {
     let res = "";
-    let level = 0;
+    let level = 1;
 
     const loopChildren = (node: TagNode) => {
-      const gap = Array(level + 1).join("  ");
+      const gap = Array(level).join("  ");
 
-      let r = gap + (level ? "└── " : "") + `${node.name}\n`;
+      let r = gap + (level > 1 ? "└── " : "") + `${node.name}\n`;
 
       node.children.forEach((child) => {
         if (child.children) {
@@ -174,11 +179,11 @@ class Converter {
           r += loopChildren(child);
         } else {
           // Image tag
-          r += gap + "  └── " + `${child.name.substring(0, 3)}\n`;
+          r += gap + "  └── " + `${child.name.substring(0, child.name.indexOf("/"))}\n`;
         }
       });
 
-      level = 0;
+      if (level > 1) level--;
       return r;
     };
 
@@ -186,35 +191,39 @@ class Converter {
       if (parent.children) {
         res += loopChildren(parent);
       } else {
-        res += `${parent.name.substring(0, 3)}\n`;
+        res += `${parent.name.substring(0, parent.name.indexOf("/"))}\n`;
       }
     }
 
+    res = res.replace(/\n+$/, "");
     console.log(res);
   }
 
   createNode(tag: string) {
-    const tagName = tag.replace(/[\<\>']+/g, "").trim() as TagNames;
+    const tagName = tag.replace(/[\<\>]+/g, "").trim() as TagNames;
     const isVoidElement = tagName.indexOf("/") > -1;
 
     return new TagNode(tagName, isVoidElement ? null : []);
   }
 
   getNextTag(html: string) {
-    const nextEndTag = html.indexOf(">");
-    return [html.substring(0, nextEndTag + 1), html.substring(nextEndTag + 1)];
+    const endOfTag = html.indexOf(">");
+    const nextTag = html.substring(0, endOfTag + 1);
+    const nextHTML = html.substring(endOfTag + 1);
+    return [nextTag, nextHTML];
   }
 }
 
 const c = new Converter();
 
 const ast = c.parse(
-  "<div><img /><b><p><img /><b><img /><img /><div><p><img /><p><img/></p></p></div></b></p></b><img /></div><div><p><img /><b><img /></b></p><img /></div><p><div><b><img /></b><img /></div></p><img /><p></p>"
+  `<head><meta class="classNameHere"/> <meta /> </head><body><div> <span></span>   <img /> <b> <p><img /><b><img /><img /><div>   <br />   <section></section>      <p><img />         <p><img/></p>         </p></div></b></p></b><img /></div><div><p>         <img /><b><img /></b></p><img /></div><p><div><b><img /></b><img /></div></p><img /><p></p></body>`
 );
 
 console.table(ast);
 
-c.formatHTML({ compress: false });
-c.formatHTML({ compress: true });
+c.formatHTML();
 
-c.prettyPrint();
+// c.formatHTML({ compress: true });
+
+// c.prettyPrint();
