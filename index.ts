@@ -53,13 +53,6 @@ class TagNode {
 class Converter {
   head: TagNode[] = [];
 
-  htmlLunaMap = {
-    "<div>": "DIV([",
-    "<p>": "P([",
-    "<b>": "B([",
-    "<img />": "IMG({})",
-  };
-
   closingTags = {
     head: "/head",
     body: "/body",
@@ -115,6 +108,10 @@ class Converter {
     return this.head;
   }
 
+  /**
+   * 
+   * @param options 1) compress - if set to true, the returned string will not have '\n' in it.
+   */
   formatHTML(options: { compress: boolean } = { compress: false }) {
     const { compress } = options;
     let res = "";
@@ -206,11 +203,16 @@ class Converter {
     return new TagNode(tagName, isVoidElement ? null : []);
   }
 
+  /**
+   *
+   * @param html
+   * @returns an array containing two values: the next html tag and the new HTML after the tag has been removed
+   */
   getNextTag(html: string) {
     const endOfTag = html.indexOf(">");
-    const nextTag = html.substring(0, endOfTag + 1);
-    const nextHTML = html.substring(endOfTag + 1);
-    return [nextTag, nextHTML];
+    const tag = html.substring(0, endOfTag + 1);
+    const newHTML = html.substring(endOfTag + 1);
+    return [tag, newHTML];
   }
 }
 
