@@ -1,5 +1,5 @@
 {
-  "name": "htmltoluna",
+  "name": "htmlparser",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -9,13 +9,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ChristianAnagnostou/HtmlToLuna.git"
+    "url": "git+https://github.com/ChristianAnagnostou/HTMLparser.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ChristianAnagnostou/HtmlToLuna/issues"
+    "url": "https://github.com/ChristianAnagnostou/HTMLparser/issues"
   },
-  "homepage": "https://github.com/ChristianAnagnostou/HtmlToLuna#readme"
+  "homepage": "https://github.com/ChristianAnagnostou/HTMLparser#readme"
 }
