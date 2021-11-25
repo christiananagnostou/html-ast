@@ -29,6 +29,7 @@
 // Guaranteed constraints: 0 ≤ html.length ≤ 6 · 104.
 
 // [output] string: The given HTML converted into the Luna format.
+import * as fs from "fs";
 
 type TagNames = "div" | "/div" | "p" | "/p" | "b" | "/b" | "img /";
 
@@ -36,7 +37,7 @@ class TagNode {
   name: string;
   children: TagNode[] | null;
 
-  constructor(name: TagNames, children: TagNode[]) {
+  constructor(name: TagNames, children: TagNode[] | null) {
     this.name = name;
     this.children = children;
   }
@@ -46,14 +47,15 @@ class TagNode {
   }
 
   forEachChild(callback: (child: TagNode) => void) {
-    this.children.forEach((child) => callback(child));
+    this.children?.forEach((child) => callback(child));
   }
 }
 
 class Converter {
   head: TagNode[] = [];
 
-  closingTags = {
+  closingTags: { [key: string]: string } = {
+    html: "/html",
     head: "/head",
     body: "/body",
     section: "/section",
@@ -67,7 +69,7 @@ class Converter {
 
   parse(html: string) {
     const parentStack: TagNode[] = [];
-    const closingTagStack = [];
+    const closingTagStack: string[] = [];
 
     while (html) {
       const [tag, newHtml] = this.getNextTag(html);
@@ -109,7 +111,7 @@ class Converter {
   }
 
   /**
-   * 
+   *
    * @param options 1) compress - if set to true, the returned string will not have '\n' in it.
    */
   formatHTML(options: { compress: boolean } = { compress: false }) {
@@ -158,7 +160,7 @@ class Converter {
     }
 
     res = res.replace(/\n+$/, "");
-    console.log(res);
+    return res;
   }
 
   prettyPrint() {
@@ -170,7 +172,7 @@ class Converter {
 
       let r = gap + (level > 1 ? "└── " : "") + `${node.name}\n`;
 
-      node.children.forEach((child) => {
+      node.children?.forEach((child) => {
         if (child.children) {
           level++;
           r += loopChildren(child);
@@ -216,6 +218,20 @@ class Converter {
   }
 }
 
+// fs.readFile("./example.html", "utf8", (err, data) => {
+//   if (err) throw err;
+
+//   const c = new Converter();
+//   const ast = c.parse(data);
+//   console.table(ast);
+
+//   const formattedHTML = c.formatHTML();
+
+//   fs.writeFile("./example.html", formattedHTML, (err) => {
+//     if (err) throw err;
+//   });
+// });
+
 const c = new Converter();
 
 const ast = c.parse(
@@ -226,6 +242,6 @@ console.table(ast);
 
 c.formatHTML();
 
-// c.formatHTML({ compress: true });
+c.formatHTML({ compress: true });
 
-// c.prettyPrint();
+c.prettyPrint();
